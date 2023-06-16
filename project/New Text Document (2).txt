@@ -1,0 +1,961 @@
+#include <SFML/Graphics.hpp>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <ctime>
+//currentwindow
+/*#include <windows.h>
+#include "MMSystem.h"*/
+#pragma warning(disable : 4996)
+using namespace sf;
+using namespace std;
+
+int loggedInUser = -1;
+class menu {
+public:
+	menu(int width, int hight) {
+		if (!font.loadFromFile("ComicSansMS3.ttf"))
+		{
+		}
+		//setting font and color and dimensions to choose game menu
+		mainmenu[0].setFont(font);
+		mainmenu[0].setFillColor(Color::Blue);
+		mainmenu[0].setString("Choose game");
+		mainmenu[0].setPosition(Vector2f(width / 3 - 50, hight / 4));
+		//setting font and color and dimensions to options menu
+		mainmenu[1].setFont(font);
+		mainmenu[1].setFillColor(Color::White);
+		mainmenu[1].setString("options");
+		mainmenu[1].setPosition(Vector2f(width / 3 - 50, hight / 4 * 2));
+		//setting font and color and dimensions to exit menu
+		mainmenu[2].setFont(font);
+		mainmenu[2].setFillColor(Color::White);
+		mainmenu[2].setString("Exit");
+		mainmenu[2].setPosition(Vector2f(width / 3 - 50, hight / 4 * 3));
+		mainmenuselected = 0;
+	}
+	void draw(RenderWindow& window) {
+		for (int i = 0; i < 3; i++) {
+			window.draw(mainmenu[i]);
+		}
+	}
+	void moveup() {
+		if (mainmenuselected - 1 >= -1) { // check if not in the first item
+			mainmenu[mainmenuselected].setFillColor(Color::White); //change current item to white
+			mainmenuselected--; // move up in the menu
+			if (mainmenuselected == -1) {//if choose game is selcted go to exit
+				mainmenuselected = 2;
+			}
+			mainmenu[mainmenuselected].setFillColor(Color::Blue); // change color of the selected item
+		}
+	}
+	void movedown() {
+		if (mainmenuselected + 1 <= 3) // check if not last item
+		{
+			mainmenu[mainmenuselected].setFillColor(Color::White); // change current item to white
+			mainmenuselected++; // move down in the menu
+			if (mainmenuselected == 3) { // if exit is selected go back to play
+				mainmenuselected = 0;
+			}
+			mainmenu[mainmenuselected].setFillColor(Color::Blue); //change color of the selected item
+		}
+	}
+public:
+	int mainmenuselected;
+	Font font;
+	Text mainmenu[3];
+};
+class child_user {
+public:
+	string id;
+	string pw;
+	int highestScores[10];
+	string dates[10];
+	int number_of_scores = 0;
+};
+class parent_user {
+public:
+	string id;
+	string pw;
+	child_user children[10];
+	int number_of_kids = 0;
+};
+bool isEqual(string a, string b) {
+	int size;
+	if (a.size() <= b.size())
+		size = b.size();
+	else
+		size = a.size();
+	for (int i = 0; i < a.size(); i++) {
+		if (a[i] != b[i])
+			return false;
+	}
+	return true;
+}
+class Login {
+public:
+	Login(int width, int hight) {
+		if (!font.loadFromFile("ComicSansMS3.ttf"))
+		{
+		}
+		wrong_id_or_pw.setFont(font);
+		wrong_id_or_pw.setFillColor(Color::Red);
+		wrong_id_or_pw.setString("wrong id or pw");
+		wrong_id_or_pw.setPosition(Vector2f(width / 3 - 50, hight - 100));
+		//setting font and color and dimensions to choose game menu
+		loginAsChildTextBox[0].setFont(font);
+		loginAsChildTextBox[0].setFillColor(Color::Green);
+		loginAsChildTextBox[0].setString("");
+		loginAsChildTextBox[0].setPosition(Vector2f(175, 300));
+		//setting font and color and dimensions to options menu
+		loginAsChildTextBox[1].setFont(font);
+		loginAsChildTextBox[1].setFillColor(Color::Green);
+		loginAsChildTextBox[1].setString("");
+		loginAsChildTextBox[1].setPosition(Vector2f(175, 400));
+		//setting font and color and dimensions to exit menu
+		loginAsParentTextBox[0].setFont(font);
+		loginAsParentTextBox[0].setFillColor(Color::Green);
+		loginAsParentTextBox[0].setString("");
+		loginAsParentTextBox[0].setPosition(Vector2f(175, 300));
+		//setting font and color and dimensions to options menu
+		loginAsParentTextBox[1].setFont(font);
+		loginAsParentTextBox[1].setFillColor(Color::Green);
+		loginAsParentTextBox[1].setString("");
+		loginAsParentTextBox[1].setPosition(Vector2f(175, 400));
+		//setting font and color and dimensions to exit menu
+		readchildrenData();
+		readParentsData();
+	}
+	void readParentsData() {
+		ifstream file("parentsInfo.txt");
+		while (!file.eof()) {
+			string tmp = "";
+			getline(file, parents[number_of_parents].id);
+			getline(file, parents[number_of_parents].pw);
+			while (getline(file, tmp)) {
+				if (tmp == "***")
+					break;
+
+				parents[number_of_parents].children[parents[number_of_parents].number_of_kids].id = tmp;
+				parents[number_of_parents].number_of_kids++;
+			}
+			number_of_parents++;
+		}
+		file.close();
+	}
+	int confirmLoginByParent(string id, string psw) {
+		for (int i = 0; i < number_of_parents; i++) {
+			if (isEqual(id, parents[i].id) && isEqual(parents[i].pw, psw)) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	void readchildrenData() {
+		ifstream file("children.txt");
+		int i = 0;
+		while (!file.eof()) {
+			string tmp = "";
+			getline(file, children[number_of_children].id);
+			getline(file, children[number_of_children].pw);
+			i = 0;
+			while (getline(file, tmp)) {
+				if (tmp == "***")
+					break;
+				children[number_of_children].highestScores[i] = stoi(tmp.substr(0, tmp.find(",")));
+				children[number_of_children].dates[i] = tmp.substr(tmp.find(",") + 1);
+				i++;
+			}
+			children[number_of_children].number_of_scores = i;
+			number_of_children++;
+
+		}
+		file.close();
+	}
+
+	int confirmLogin(string id, string psw) {
+		for (int i = 0; i < number_of_children; i++) {
+			if (isEqual(id, children[i].id) && isEqual(children[i].pw, psw)) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	void draw_login_as_child(RenderWindow& window) {
+		Texture texture;
+		if (!texture.loadFromFile("ca54f056-ef02-4169-ab49-7bae4181d60d.jpg")) {}
+		Sprite sprite(texture);
+		window.draw(sprite);
+		for (int i = 0; i < 2; i++) {
+			window.draw(loginAsChildTextBox[i]);
+		}
+		if (isFirstTime)
+			window.draw(wrong_id_or_pw);
+	}
+	void draw_login_as_parent(RenderWindow& window) {
+		Texture texture;
+		if (!texture.loadFromFile("ca54f056-ef02-4169-ab49-7bae4181d60d.jpg")) {}
+		Sprite sprite(texture);
+		window.draw(sprite);
+		for (int i = 0; i < 2; i++) {
+			window.draw(loginAsParentTextBox[i]);
+		}
+		if (isFirstTime)
+			window.draw(wrong_id_or_pw);
+	}
+	void draw_child_performance(RenderWindow& window) {
+		for (int i = 0; i < parents[loggedInUser].number_of_kids; i++) {
+			for (int j = 0; j < number_of_children; j++) {
+				if (isEqual(children[j].id, parents[loggedInUser].children[i].id)) {
+					childPerformance[i].setFont(font);
+					childPerformance[i].setFillColor(Color::White);
+					childPerformance[i].setString(children[i].id + "\n");
+					for (int a = 0; a < children[i].number_of_scores; a++)
+						childPerformance[i].setString(childPerformance[i].getString() + "score:" + to_string(children[i].highestScores[a]) + " date:" + children[i].dates[a] + "\n");
+					childPerformance[i].setPosition(Vector2f(800 / 3 - 50, 600 / 5 * i));
+					window.draw(childPerformance[i]);
+					break;
+				}
+			}
+		}
+	}
+	bool isFirstTime = 0;
+	int textBoxSelected = 0;
+	Font font;
+	Text loginAsChildTextBox[2];
+	Text loginAsParentTextBox[2];
+	Text childPerformance[50];
+	Text wrong_id_or_pw;
+	int number_of_parents = 0;
+	int number_of_scores = 0;
+	int number_of_children = 0;
+	parent_user parents[50];
+	child_user children[10];
+};
+class gamemenu {
+public:
+	gamemenu(int width, int hight) {
+		if (!font.loadFromFile("ComicSansMS3.ttf"))
+		{
+		}
+		//setting font and color and dimensions to choose game menu
+		gameMenu[0].setFont(font);
+		gameMenu[0].setFillColor(Color::Blue);
+		gameMenu[0].setString("XO");
+		gameMenu[0].setPosition(Vector2f(width / 3 - 50, hight / 4));
+		//setting font and color and dimensions to options menu
+		gameMenu[1].setFont(font);
+		gameMenu[1].setFillColor(Color::White);
+		gameMenu[1].setString("math problems");
+		gameMenu[1].setPosition(Vector2f(width / 3 - 50, hight / 4 * 2));
+		//setting font and color and dimensions to exit menu
+		gameMenu[2].setFont(font);
+		gameMenu[2].setFillColor(Color::White);
+		gameMenu[2].setString("Back");
+		gameMenu[2].setPosition(Vector2f(width / 3 - 50, hight / 4 * 3));
+		gamemenuselected = 0;
+	}
+	void draw(RenderWindow& window) {
+		for (int i = 0; i < 3; i++) {
+			window.draw(gameMenu[i]);
+		}
+	}
+	void moveup() {
+		if (gamemenuselected - 1 >= -1) { // check if not in the first item
+			gameMenu[gamemenuselected].setFillColor(Color::White); //change current item to white
+			gamemenuselected--; // move up in the menu
+			if (gamemenuselected == -1) {//if choose game is selcted go to exit
+				gamemenuselected = 2;
+			}
+			gameMenu[gamemenuselected].setFillColor(Color::Blue); // change color of the selected item
+		}
+	}
+	void movedown() {
+		if (gamemenuselected + 1 <= 3) // check if not last item
+		{
+			gameMenu[gamemenuselected].setFillColor(Color::White); // change current item to white
+			gamemenuselected++; // move down in the menu
+			if (gamemenuselected == 3) { // if exit is selected go back to play
+				gamemenuselected = 0;
+			}
+			gameMenu[gamemenuselected].setFillColor(Color::Blue); //change color of the selected item
+		}
+	}
+public:
+	int gamemenuselected;
+	Font font;
+	Text gameMenu[3];
+};
+/////////////////////////////////////////////////////////////////////////////////
+class XO {
+public:
+	int X_Oarr[3][3] = {};
+	bool win = false;
+	Font font;
+	void X(RenderWindow& window, int x, int y) {
+		sf::Texture texture;
+		if (!texture.loadFromFile("X_letter.png")) {}
+		Sprite sprite(texture);
+		sprite.setScale(Vector2f(0.25f, 0.25f));
+		sprite.setPosition(Vector2f(150 * x + 180, 150 * y + 100));
+		window.draw(sprite);
+	}
+	void O(RenderWindow& window, int x, int y) {
+		sf::Texture texture;
+		if (!texture.loadFromFile("O_letter.png")) {}
+		Sprite sprite(texture);
+		sprite.setScale(Vector2f(0.25f, 0.25f));
+		sprite.setPosition(Vector2f(150 * x + 180, 150 * y + 100));
+		window.draw(sprite);
+	}
+	void clear() {
+
+		for (int i = 0; i < 3; i++) {
+			for (int j = 0; j < 3; j++) {
+				X_Oarr[i][j] = 0;
+			}
+		}
+	}
+	int checkWin() {
+		for (int i = 0; i < 3; i++) {
+
+			if (X_Oarr[i][0] != 0 && X_Oarr[i][0] == X_Oarr[i][1] && X_Oarr[i][1] == X_Oarr[i][2])
+				return X_Oarr[i][0];
+			if (X_Oarr[0][i] != 0 && X_Oarr[0][i] == X_Oarr[1][i] && X_Oarr[2][i] == X_Oarr[1][i])
+				return X_Oarr[0][i];
+			if (X_Oarr[i + 1][i + 1] != 0 && i == 0 && X_Oarr[i + 1][i + 1] == X_Oarr[i][i] && X_Oarr[i][i] == X_Oarr[i + 2][i + 2])
+				return X_Oarr[i][i];
+			else if (X_Oarr[i - 2][i] != 0 && i == 2 && X_Oarr[i - 2][i] == X_Oarr[i - 1][i - 1] && X_Oarr[i - 1][i - 1] == X_Oarr[i][i - 2])
+				return X_Oarr[i - 2][i];
+		}
+		return -1;
+	}
+	void draw(RenderWindow& window) {
+		Texture texture;
+		if (!texture.loadFromFile("1a494ba1-a9e4-4272-b23c-35f723ed8eb1.jpg")) {}
+		Sprite sprite(texture);
+		window.draw(sprite);
+		for (int i = 0; i < 3; i++) {
+			for (int j = 0; j < 3; j++) {
+				if (X_Oarr[i][j] == 1) {
+					X(window, i, j);
+				}
+				else if (X_Oarr[i][j] == 2) {
+					O(window, i, j);
+				}
+			}
+		}
+	}
+	void drawWinner(RenderWindow& window, int x) {
+		Text Winner;
+		if (!font.loadFromFile("ComicSansMS3.ttf"))
+		{
+		}
+		if (x == 2) {
+			Texture texture;
+			if (!texture.loadFromFile("99912932-7ccc-44ff-9b1d-09822d1f5f29.jpg")) {}
+			Sprite sprite(texture);
+			window.draw(sprite);
+		}
+		else if (x == 1) {
+			Texture texture;
+			if (!texture.loadFromFile("bee987df-51da-4308-8e1e-4fabf25d208f.jpg")) {}
+			Sprite sprite(texture);
+			window.draw(sprite);
+		}
+	}
+};
+class StartMenu {
+public:
+	StartMenu(int width, int hight) {
+		if (!font.loadFromFile("ComicSansMS3.ttf"))
+		{
+		}
+		//setting font and color and dimensions to choose game menu
+		startMenu[0].setFont(font);
+		startMenu[0].setFillColor(Color::Blue);
+		startMenu[0].setString("Login as a child");
+		startMenu[0].setPosition(Vector2f(width / 3 - 50, hight / 4));
+		//setting font and color and dimensions to options menu
+		startMenu[1].setFont(font);
+		startMenu[1].setFillColor(Color::White);
+		startMenu[1].setString("register");
+		startMenu[1].setPosition(Vector2f(width / 3 - 50, hight / 4 * 2));
+		//setting font and color and dimensions to options menu
+		startMenu[2].setFont(font);
+		startMenu[2].setFillColor(Color::White);
+		startMenu[2].setString("login as a parent");
+		startMenu[2].setPosition(Vector2f(width / 3 - 50, hight / 4 * 3));
+	}
+	void draw(RenderWindow& window) {
+		for (int i = 0; i < 3; i++) {
+			window.draw(startMenu[i]);
+		}
+	}
+	void moveup() {
+		if (startmenuselected - 1 >= -1) { // check if not in the first item
+			startMenu[startmenuselected].setFillColor(Color::White); //change current item to white
+			startmenuselected--; // move up in the menu
+			if (startmenuselected == -1) {//if choose game is selcted go to exit
+				startmenuselected = 2;
+			}
+			startMenu[startmenuselected].setFillColor(Color::Blue); // change color of the selected item
+		}
+	}
+	void movedown() {
+		if (startmenuselected + 1 <= 3) // check if not last item
+		{
+			startMenu[startmenuselected].setFillColor(Color::White); // change current item to white
+			startmenuselected++; // move down in the menu
+			if (startmenuselected == 3) { // if exit is selected go back to play
+				startmenuselected = 0;
+			}
+			startMenu[startmenuselected].setFillColor(Color::Blue); //change color of the selected item
+		}
+	}
+	int startmenuselected = 0;
+	Font font;
+	Text startMenu[3];
+};
+class parentMenu {
+public:
+	parentMenu(int width, int hight) {
+		if (!font.loadFromFile("ComicSansMS3.ttf"))
+		{
+		}
+		//setting font and color and dimensions to choose game menu
+		startMenu[0].setFont(font);
+		startMenu[0].setFillColor(Color::Blue);
+		startMenu[0].setString("Login");
+		startMenu[0].setPosition(Vector2f(width / 3 - 50, hight / 4));
+		//setting font and color and dimensions to options menu
+		startMenu[1].setFont(font);
+		startMenu[1].setFillColor(Color::White);
+		startMenu[1].setString("register");
+		startMenu[1].setPosition(Vector2f(width / 3 - 50, hight / 4 * 2));
+	}
+	void draw(RenderWindow& window) {
+		for (int i = 0; i < 2; i++) {
+			window.draw(startMenu[i]);
+		}
+	}
+	void moveup() {
+		if (startmenuselected - 1 >= -1) { // check if not in the first item
+			startMenu[startmenuselected].setFillColor(Color::White); //change current item to white
+			startmenuselected--; // move up in the menu
+			if (startmenuselected == -1) {//if choose game is selcted go to exit
+				startmenuselected = 2;
+			}
+			startMenu[startmenuselected].setFillColor(Color::Blue); // change color of the selected item
+		}
+	}
+	void movedown() {
+		if (startmenuselected + 1 <= 3) // check if not last item
+		{
+			startMenu[startmenuselected].setFillColor(Color::White); // change current item to white
+			startmenuselected++; // move down in the menu
+			if (startmenuselected == 3) { // if exit is selected go back to play
+				startmenuselected = 0;
+			}
+			startMenu[startmenuselected].setFillColor(Color::Blue); //change color of the selected item
+		}
+	}
+	int startmenuselected = 0;
+	Font font;
+	Text startMenu[3];
+};
+class register_user {
+
+public:
+	register_user(int width, int hight) {
+		if (!font.loadFromFile("ComicSansMS3.ttf"))
+		{
+		}
+		//setting font and color and dimensions to choose game menu
+		textBox[0].setFont(font);
+		textBox[0].setFillColor(Color::Blue);
+		textBox[0].setString("");
+		textBox[0].setPosition(Vector2f(width / 3 - 50, hight / 4));
+		//setting font and color and dimensions to options menu
+		textBox[1].setFont(font);
+		textBox[1].setFillColor(Color::White);
+		textBox[1].setString("");
+		textBox[1].setPosition(Vector2f(width / 3 - 50, hight / 4 * 2));
+		//setting font and color and dimensions to exit menu
+		textBox[2].setFont(font);
+		textBox[2].setFillColor(Color::White);
+		textBox[2].setString("");
+		textBox[2].setPosition(Vector2f(width / 3 - 50, hight / 4 * 3));
+		//setting font and color and dimensions to exit menu
+	}
+	void writeData(string id, string pw) {
+		fstream file("parentsInfo.txt", fstream::app);
+		file << id << endl << pw << endl << "***" << endl;
+	}
+
+	bool confirmRegister(string id, string psw, string confirmpsw) {
+		if (!id.empty() && !psw.empty() && !confirmpsw.empty() && isEqual(psw, confirmpsw))
+			return true;
+		else
+			return false;
+	}
+
+	void draw(RenderWindow& window) {
+		for (int i = 0; i < 3; i++) {
+			window.draw(textBox[i]);
+		}
+	}
+	int textBoxSelected = 0;
+	Font font;
+	Text textBox[3];
+};
+
+class mathProblem {
+public:
+	mathProblem(int width, int hight) {
+		if (!font.loadFromFile("ComicSansMS3.ttf"))
+		{
+		}
+		ScoreBoard.setFont(font);
+		ScoreBoard.setFillColor(Color::Yellow);
+		ScoreBoard.setString("Score: " + to_string(score) + "Level:" + to_string(lvl));
+		ScoreBoard.setPosition(Vector2f(0, 0));
+	}
+	void writeScore(Login login) {
+		// current date/time based on current system
+   // current date/time based on current system
+		time_t now = time(0);
+
+		// convert now to string form
+		char* dt = ctime(&now);
+		string s = dt;
+		login.children[loggedInUser].highestScores[login.children[loggedInUser].number_of_scores] = score;
+		login.children[loggedInUser].dates[login.children[loggedInUser].number_of_scores] = s.substr(0, s.find('\n'));
+		login.children[loggedInUser].number_of_scores++;
+		ofstream file("children.txt");
+
+		for (int i = 0; i < login.number_of_children; i++) {
+			if (login.children[i].id == "") {
+				break;
+			}
+			file << login.children[i].id << endl << login.children[i].pw << endl;
+			cout << login.children[i].id << endl << login.children[i].pw << endl;
+			for (int j = 0; j < login.children[i].number_of_scores; j++) {
+				cout << login.children[i].highestScores[j] << "," << login.children[i].dates[j] << endl;
+				file << login.children[i].highestScores[j] << "," << login.children[i].dates[j] << endl;
+			}
+			cout << "***" << endl;
+			file << "***" << endl;
+		}
+		file.close();
+
+		score = 0;
+		choiceSelected = 0;
+		stage_number = 100;
+		lvlNumber = 0;
+	}
+	void generateLevel() {
+		srand(time(NULL));
+
+		int width = 800, hight = 600;
+		problemsNumber[0] = rand() % stage_number;
+		//setting font and color and dimensions to choose game menu
+		problem.setFont(font);
+		problem.setString(to_string(problemsNumber[0]));
+		problem.setPosition(Vector2f(230, 220));
+		//setting font and color and dimensions to options menu
+		problemsNumber[1] = rand() % stage_number;
+		problem.setFillColor(Color::Magenta);
+		if (lvlNumber == 0)
+			problem.setString(problem.getString() + "+");
+		else if (lvlNumber == 1)
+			problem.setString(problem.getString() + "-");
+		else if (lvlNumber == 2)
+			problem.setString(problem.getString() + "*");
+		else {
+			problemsNumber[0] = rand() % stage_number + stage_number * rand() % 100;
+			problem.setString(to_string(problemsNumber[0]) + "/");
+			problemsNumber[1] = rand() % (stage_number / 10);
+		}
+		problem.setString(problem.getString() + to_string(problemsNumber[1]));
+		//setting font and color and dimensions to choose game menu
+		choices[0].setFont(font);
+		choices[0].setFillColor(Color::Red);
+		choices[0].setPosition(Vector2f(230, 280));
+		//setting font and color and dimensions to options menu
+		choices[1].setFont(font);
+		choices[1].setFillColor(Color::Blue);
+		choices[1].setPosition(Vector2f(230, 320));
+		//setting font and color and dimensions to exit menu
+		choices[2].setFont(font);
+		choices[2].setFillColor(Color::Blue);
+		choices[2].setPosition(Vector2f(230, 360));
+		rightchoice = rand() % 3;
+		if (lvlNumber == 0) {
+			number = problemsNumber[0] + problemsNumber[1] + (rand() % 100 - 50);
+			choices[0].setString(to_string(number));
+			number = problemsNumber[0] + problemsNumber[1] + (rand() % 100 - 50);
+			choices[1].setString(to_string(number));
+			number = problemsNumber[0] + problemsNumber[1] + (rand() % 100 - 50);
+			choices[2].setString(to_string(number));
+			choices[rightchoice].setString(to_string(problemsNumber[0] + problemsNumber[1]));
+		}
+		else if (lvlNumber == 1) {
+			number = problemsNumber[0] - problemsNumber[1] + (rand() % 100 - 50);
+			choices[0].setString(to_string(number));
+			number = problemsNumber[0] - problemsNumber[1] + (rand() % 100 - 50);
+			choices[1].setString(to_string(number));
+			number = problemsNumber[0] - problemsNumber[1] + (rand() % 100 - 50);
+			choices[2].setString(to_string(number));
+			choices[rightchoice].setString(to_string(problemsNumber[0] - problemsNumber[1]));
+		}
+		else if (lvlNumber == 2) {
+			number = problemsNumber[0] * problemsNumber[1] + (rand() % 1000 - 500);
+			choices[0].setString(to_string(number));
+			number = problemsNumber[0] * problemsNumber[1] + (rand() % 1000 - 500);
+			choices[1].setString(to_string(number));
+			number = problemsNumber[0] * problemsNumber[1] + (rand() % 1000 - 500);
+			choices[2].setString(to_string(number));
+			choices[rightchoice].setString(to_string(problemsNumber[0] * problemsNumber[1]));
+		}
+		else {
+			if (problemsNumber[1] == 0) {
+
+				choices[rightchoice].setString("undefined");
+			}
+			else {
+				number = problemsNumber[0] / problemsNumber[1] + (rand() % 10);
+				choices[0].setString(to_string(number));
+				number = problemsNumber[0] / problemsNumber[1] + (rand() % 10);
+				choices[1].setString(to_string(number));
+				number = problemsNumber[0] / problemsNumber[1] + (rand() % 10);
+				choices[2].setString(to_string(number));
+				choices[rightchoice].setString(to_string(problemsNumber[0] / problemsNumber[1]));
+			}
+
+			lvlNumber = 0;
+			stage_number *= 10;
+		}
+		lvl++;
+		choiceSelected = 0;
+		lvlNumber++;
+	}
+	void draw(RenderWindow& window) {
+		Texture texture;
+		if (!texture.loadFromFile("41d5d5c9-a5c2-4f5d-a910-5ec9aac22ac8.jpg")) {}
+		Sprite sprite(texture);
+		window.draw(sprite);
+		window.draw(problem);
+		for (int i = 0; i < 3; i++) {
+			window.draw(choices[i]);
+		}
+		window.draw(ScoreBoard);
+	}
+	void moveup() {
+		if (choiceSelected - 1 >= -1) { // check if not in the first item
+			choices[choiceSelected].setFillColor(Color::Blue); //change current item to white
+			choiceSelected--; // move up in the menu
+			if (choiceSelected == -1) {//if choose game is selcted go to exit
+				choiceSelected = 2;
+			}
+			choices[choiceSelected].setFillColor(Color::Red); // change color of the selected item
+		}
+	}
+	void movedown() {
+		if (choiceSelected + 1 <= 3) // check if not last item
+		{
+			choices[choiceSelected].setFillColor(Color::Blue); // change current item to white
+			choiceSelected++; // move down in the menu
+			if (choiceSelected == 3) { // if exit is selected go back to play
+				choiceSelected = 0;
+			}
+			choices[choiceSelected].setFillColor(Color::Red); //change color of the selected item
+		}
+	}
+public:
+	int score = 0;
+	int choiceSelected = 0;
+	Font font;
+	int number;
+	int stage_number = 100;
+	int lvl = 0;
+	int lvlNumber = 0;
+	int problemsNumber[2];
+	Text problem;
+	Text choices[3];
+	Text ScoreBoard;
+	int rightchoice;
+};
+int currentwindow = -1;
+int main() {
+	//PlaySound( TEXT("musicc.wav"),NULL,SND_SYNC);
+	//system("pause");
+	//if (!texture.loadFromFile( 
+	cout << "success or not :" << endl;
+	//making the window with resolution 800*600 and name minigames
+	RenderWindow window(VideoMode(800, 600), "minigames");
+	StartMenu startmenu(800, 600);
+	menu m(800, 600);
+	gamemenu gm(800, 600);
+	XO xo;
+	mathProblem mp(800, 600);
+	Login login(800, 600);
+	register_user reg_user(800, 600);
+	int checkWin = -1;
+	bool X_or_O = false;
+	// defining a window that doesn't close untill i close it
+	while (window.isOpen())
+	{
+		window.setFramerateLimit(30);
+		Event evnt;
+		while (window.pollEvent(evnt)) {
+
+			if (evnt.type == Event::Closed)
+				window.close();
+			if (evnt.type == Event::KeyReleased) { // if any keyboard key is pressed
+				if (currentwindow == -1 && evnt.key.code == Keyboard::Up)
+				{
+					startmenu.moveup();
+				}
+				if (currentwindow == -1 && evnt.key.code == Keyboard::Down)
+				{
+					startmenu.movedown();
+				}
+				if (currentwindow == 0 && evnt.key.code == Keyboard::Up) // if key up is pressed
+				{
+					m.moveup(); // move up in the menu
+					break;
+				}
+				if (currentwindow == 0 && evnt.key.code == Keyboard::Down) // if key up is pressed
+				{
+					m.movedown(); // move down in the menu 
+					break;
+				}
+				if (currentwindow == 1 && evnt.key.code == Keyboard::Up) // if key up is pressed
+				{
+					gm.moveup(); // move down in the menu 
+					break;
+				}
+				if (currentwindow == 1 && evnt.key.code == Keyboard::Down) // if key up is pressed
+				{
+					gm.movedown(); // move down in the menu 
+					break;
+				}
+				if (currentwindow == 3 && evnt.key.code == Keyboard::Up) // if key up is pressed
+				{
+					mp.moveup(); // move down in the menu 
+					break;
+				}
+				if (currentwindow == 3 && evnt.key.code == Keyboard::Down) // if key up is pressed
+				{
+					mp.movedown(); // move down in the menu 
+					break;
+				}
+				if (evnt.key.code == Keyboard::Enter) // if key enter is pressed
+				{
+					if (currentwindow == -3) {
+						if (reg_user.confirmRegister(reg_user.textBox[0].getString(), reg_user.textBox[1].getString(), reg_user.textBox[2].getString()))
+						{
+							reg_user.writeData(reg_user.textBox[0].getString(), reg_user.textBox[1].getString());
+							currentwindow = -0;//////////////////////////////////////
+						}
+					}
+					if (currentwindow == -2) {
+						if (login.confirmLogin(login.loginAsChildTextBox[0].getString(), login.loginAsChildTextBox[1].getString()) != -1) {
+							currentwindow = 0;
+							loggedInUser = login.confirmLogin(login.loginAsChildTextBox[0].getString(), login.loginAsChildTextBox[1].getString());
+						}
+						login.isFirstTime = true;
+					}
+					if (currentwindow == -4) {
+
+						if (login.confirmLoginByParent(login.loginAsParentTextBox[0].getString(), login.loginAsParentTextBox[1].getString()) != -1) {
+							currentwindow = 4;
+							loggedInUser = login.confirmLoginByParent(login.loginAsParentTextBox[0].getString(), login.loginAsParentTextBox[1].getString());
+						}
+						login.isFirstTime = true;
+					}
+					if (currentwindow == -1 && startmenu.startmenuselected == 0) {
+						currentwindow = -2;
+						break;
+					}
+					if (currentwindow == -1 && startmenu.startmenuselected == 1) {
+						currentwindow = -3;
+						break;
+					}
+					if (currentwindow == -1 && startmenu.startmenuselected == 2) {
+						currentwindow = -4;
+						break;
+					}
+					if (currentwindow == 0 && m.mainmenuselected == 0) {
+						currentwindow = 1;
+						break;
+					}
+					if (currentwindow == 0 && m.mainmenuselected == 2)
+						window.close();
+					if (currentwindow == 1 && gm.gamemenuselected == 2)
+						currentwindow = 0;
+					if (currentwindow == 1 && gm.gamemenuselected == 0)
+						currentwindow = 2;
+					if (currentwindow == 1 && gm.gamemenuselected == 1) {
+						currentwindow = 3;
+					}
+					if (currentwindow == 3 && mp.stage_number != 100000) {
+						if (mp.rightchoice == mp.choiceSelected) {
+							mp.score += 10;
+						}
+						mp.generateLevel();
+						mp.ScoreBoard.setString("Score: " + to_string(mp.score) + "\nLevel:" + to_string(mp.lvl));
+					}
+					else if (currentwindow == 3 && mp.stage_number == 100000) {
+						mp.writeScore(login);
+						currentwindow = 0;
+					}
+
+				}
+				if (evnt.key.code == Keyboard::Escape) {
+					if (currentwindow == 2 && checkWin != -1) {
+						currentwindow = 0;
+						checkWin = -1;
+						X_or_O = false;
+						xo.clear();
+					}
+				}
+			}
+			if (evnt.type == Event::TextEntered) {
+
+				if (currentwindow == -2 && login.textBoxSelected == 0 && evnt.key.code != 8) {
+					login.loginAsChildTextBox[login.textBoxSelected].setString(login.loginAsChildTextBox[login.textBoxSelected].getString() + evnt.text.unicode);
+				}
+				if (currentwindow == -2 && login.textBoxSelected == 1 && evnt.key.code != 8) {
+					login.loginAsChildTextBox[login.textBoxSelected].setString(login.loginAsChildTextBox[login.textBoxSelected].getString() + evnt.text.unicode);
+				}
+				if (currentwindow == -2 && evnt.key.code == 8) {
+					login.loginAsChildTextBox[login.textBoxSelected].setString(login.loginAsChildTextBox[login.textBoxSelected]
+						.getString()
+						.substring(0,
+							login.loginAsChildTextBox[login.textBoxSelected].getString().getSize() - 1));
+				}
+				if (currentwindow == -4 && login.textBoxSelected == 0 && evnt.key.code != 8) {
+					login.loginAsParentTextBox[login.textBoxSelected].setString(login.loginAsParentTextBox[login.textBoxSelected].getString() + evnt.text.unicode);
+				}
+				if (currentwindow == -4 && login.textBoxSelected == 1 && evnt.key.code != 8) {
+					login.loginAsParentTextBox[login.textBoxSelected].setString(login.loginAsParentTextBox[login.textBoxSelected].getString() + evnt.text.unicode);
+				}
+				if (currentwindow == -4 && evnt.key.code == 8) {
+					login.loginAsParentTextBox[login.textBoxSelected].setString(login.loginAsParentTextBox[login.textBoxSelected]
+						.getString()
+						.substring(0,
+							login.loginAsChildTextBox[login.textBoxSelected].getString().getSize() - 1));
+				}
+				if (currentwindow == -3 && reg_user.textBoxSelected == 0 && evnt.key.code != 8) {
+					reg_user.textBox[reg_user.textBoxSelected].setString(reg_user.textBox[reg_user.textBoxSelected].getString() + evnt.text.unicode);
+				}
+				if (currentwindow == -3 && reg_user.textBoxSelected == 1 && evnt.key.code != 8) {
+					reg_user.textBox[reg_user.textBoxSelected].setString(reg_user.textBox[reg_user.textBoxSelected].getString() + evnt.text.unicode);
+				}
+				if (currentwindow == -3 && reg_user.textBoxSelected == 2 && evnt.key.code != 8) {
+					reg_user.textBox[reg_user.textBoxSelected].setString(reg_user.textBox[reg_user.textBoxSelected].getString() + evnt.text.unicode);
+				}
+				if (currentwindow == -2 && evnt.key.code == 8) {
+					reg_user.textBox[reg_user.textBoxSelected].setString(reg_user.textBox[reg_user.textBoxSelected]
+						.getString()
+						.substring(0,
+							reg_user.textBox[reg_user.textBoxSelected].getString().getSize() - 1));
+				}
+			}
+			if (evnt.type == Event::MouseButtonPressed) {
+				cout << evnt.mouseButton.x << " " << evnt.mouseButton.y << endl;
+				if (evnt.mouseButton.button == Mouse::Left) {//dost 3l mouse doost shmal
+					if (currentwindow == 2) {
+						int x = evnt.mouseButton.x;
+						int y = evnt.mouseButton.y;
+						int r = -1, c = -1;
+						if (x < 160 * 1 + 160 && x > 160)
+							r = 0;
+						else if (x < 160 * 2 + 160 && x > 180)
+							r = 1;
+						else if (x < 160 * 3 + 160 && x > 180)
+							r = 2;
+						if (y < 150 * 1 + 100 && y > 100)
+							c = 0;
+						else if (y < 150 * 2 + 100 && y > 100)
+							c = 1;
+						else if (y < 150 * 3 + 100 && y > 100)
+							c = 2;
+						if (r != -1 && c != -1) {
+							if (X_or_O == false && xo.X_Oarr[r][c] == 0) {
+								xo.X_Oarr[r][c] = 1;
+								X_or_O = true;
+							}
+							else if (X_or_O == true && xo.X_Oarr[r][c] == 0) {
+								xo.X_Oarr[r][c] = 2;
+								X_or_O = false;
+							}
+							checkWin = xo.checkWin();
+
+						}
+					}
+					if (currentwindow == -2) {
+						if (evnt.mouseButton.x > 170 && evnt.mouseButton.x < 570 && evnt.mouseButton.y > 300 && evnt.mouseButton.y < 340) {
+							login.textBoxSelected = 0;
+						}
+						if (evnt.mouseButton.x > 170 && evnt.mouseButton.x < 570 && evnt.mouseButton.y > 400 && evnt.mouseButton.y < 440) {
+							login.textBoxSelected = 1;
+						}
+					}
+					if (currentwindow == -3) {
+						if (evnt.mouseButton.x > 0 && evnt.mouseButton.x < 600 && evnt.mouseButton.y > 0 && evnt.mouseButton.y < 200) {
+							reg_user.textBoxSelected = 0;
+						}
+						if (evnt.mouseButton.x > 0 && evnt.mouseButton.x < 600 && evnt.mouseButton.y > 200 && evnt.mouseButton.y < 400) {
+							reg_user.textBoxSelected = 1;
+						}
+						if (evnt.mouseButton.x > 0 && evnt.mouseButton.x < 600 && evnt.mouseButton.y >400 && evnt.mouseButton.y < 600) {
+							reg_user.textBoxSelected = 2;
+						}
+					}
+					if (currentwindow == -4) {
+						if (evnt.mouseButton.x > 170 && evnt.mouseButton.x < 570 && evnt.mouseButton.y > 300 && evnt.mouseButton.y < 340) {
+							login.textBoxSelected = 0;
+						}
+						if (evnt.mouseButton.x > 170 && evnt.mouseButton.x < 570 && evnt.mouseButton.y > 400 && evnt.mouseButton.y < 440) {
+							login.textBoxSelected = 1;
+						}
+					}
+				}
+			}
+		}
+
+		window.clear();
+		if (currentwindow == -4) {
+			login.draw_login_as_parent(window);
+		}
+		if (currentwindow == -3) {
+			reg_user.draw(window);
+		}
+		if (currentwindow == -2) {
+			login.draw_login_as_child(window);
+		}
+		if (currentwindow == -1) {
+			startmenu.draw(window);
+		}
+		if (currentwindow == 0)
+			m.draw(window); // draw the main menu
+		if (currentwindow == 1)
+			gm.draw(window);
+		if (currentwindow == 2 && checkWin == -1)
+			xo.draw(window);
+		else if (currentwindow == 2 && checkWin != -1)
+			xo.drawWinner(window, checkWin);
+		if (currentwindow == 3)
+			mp.draw(window);
+		if (currentwindow == 4) {
+			login.draw_child_performance(window);
+		}
+
+		window.display();
+	}
+}

@@ -1,0 +1,38 @@
+#include <iostream>
+#include<cstring>
+#include <algorithm>
+using namespace std;
+class child {
+private:
+	char finame[10];
+	char sename[10];
+	int age[3];
+
+public:
+	void fsname(char t[]) {
+		strcpy_s(finame, t);
+	}
+	void sename(char o[]) {
+		strcpy_s(sename, o);
+	}
+	void aage(int n[]) {
+		(age, n);
+	}
+	char* getname() {
+		return finame;
+	}
+	char* getname() {
+		return sename;
+	}
+	int* age() {
+		return age;
+	}
+	void print() {
+		cout << "first name =" << finame << "\n" <<
+			"second name =" << sename << "\n" <<
+			"age =" << age << "\n";
+	}
+};
+int main() {
+	fsname
+}
